@@ -1,0 +1,108 @@
+import requests
+import tkinter as tk
+from tkinter import messagebox
+
+def get_weather(city, api_key):
+    base_url = "https://api.weatherbit.io/v2.0/current"
+    params = {"city": city, "key": api_key, "units": "M"}  # You can change the units if needed
+
+    response = requests.get(base_url, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        return data['data'][0] if 'data' in data else None
+    else:
+        return None
+
+def get_forecast(city, api_key):
+    base_url = "https://api.weatherbit.io/v2.0/forecast/daily"
+    params = {"city": city, "key": api_key, "units": "M"}
+
+    response = requests.get(base_url, params=params)
+
+    if response.status_code == 200:
+        data = response.json()
+        return data['data'] if 'data' in data else None
+    else:
+        return None
+
+def display_weather(data):
+    if data:
+        result = (
+            f"Weather in {data['city_name']}, {data['country_code']}:\n"
+            f"Temperature: {data['temp']}°C\n"
+            f"Description: {data['weather']['description']}\n"
+            f"Humidity: {data['rh']}%\n"
+            f"Wind Speed: {data['wind_spd']} m/s"
+        )
+    else:
+        result = "Error fetching weather data."
+
+    return result
+
+def display_forecast(data):
+    if data:
+        result = "5-Day Forecast:\n"
+        for day in data:
+            result += (
+                f"{day['valid_date']} - Min Temp: {day['min_temp']}°C, Max Temp: {day['max_temp']}°C, "
+                f"{day['weather']['description']}\n"
+            )
+    else:
+        result = "Error fetching forecast data."
+
+    return result
+
+def on_submit():
+    city_name = city_entry.get()
+    weather_data = get_weather(city_name, api_key)
+    forecast_data = get_forecast(city_name, api_key)
+
+    result_text.set(display_weather(weather_data))
+    forecast_text.set(display_forecast(forecast_data))
+
+# Replace 'YOUR_API_KEY' with your actual Weatherbit API key
+api_key = 'b67f96d046434c988cfe008de3cbb685'
+
+# Tkinter GUI part
+root = tk.Tk()
+root.title("Weather App")
+
+# GUI components
+city_label = tk.Label(root, text="Enter city name:")
+city_entry = tk.Entry(root)
+submit_button = tk.Button(root, text="Get Weather", command=on_submit)
+result_text = tk.StringVar()
+result_label = tk.Label(root, textvariable=result_text)
+
+forecast_text = tk.StringVar()
+forecast_label = tk.Label(root, textvariable=forecast_text)
+
+# Buttons for the next 5 days
+day_buttons = []
+for day in range(1, 6):
+    button = tk.Button(root, text=f"Day {day}", command=lambda d=day: show_forecast_day(d))
+    day_buttons.append(button)
+
+# GUI layout
+city_label.pack(pady=10)
+city_entry.pack(pady=10)
+submit_button.pack(pady=10)
+result_label.pack(pady=10)
+forecast_label.pack(pady=10)
+
+for button in day_buttons:
+    button.pack(side=tk.LEFT, padx=5)
+
+# Function to display forecast for a specific day
+def show_forecast_day(day):
+    city_name = city_entry.get()
+    forecast_data = get_forecast(city_name, api_key)
+
+    if forecast_data:
+        day_data = forecast_data[day - 1] if day - 1 < len(forecast_data) else None
+        forecast_text.set(display_forecast([day_data]))
+    else:
+        forecast_text.set("Error fetching forecast data.")
+
+root.mainloop()
